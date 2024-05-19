@@ -1,0 +1,23 @@
+﻿@{
+    ViewData["Title"] = "Redmine migration";
+}
+
+<h1 class="text-center">@ViewData["Title"]</h1>
+<hr class="my-4">
+<div class="container mt-4">
+    <div id="stepContainer">
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function loadStepContent(step) {
+            $.get('/Migration/StepContent?step=' + step, function (data) {
+                $('#stepContainer').html(data);
+            });
+        }
+
+        loadStepContent(1);
+    </script>
+}
