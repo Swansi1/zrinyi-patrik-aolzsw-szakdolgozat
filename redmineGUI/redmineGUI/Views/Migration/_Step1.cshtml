@@ -1,30 +1,63 @@
 @model redmineGUI.Models.ApiKeyModel
-xKiZSdNbp5M54gA5p7Xv
 
-<form asp-action="SaveApiKey" method="post">
+<form id="apiKeyForm">
     <div class="d-flex flex-row justify-content-center gap-5">
         <div class="flex-fill p-5 mb-4 bg-body-tertiary rounded-3" id="import-container">
+            <h2 class="text-center mb-2">Import server</h2>
             <div class="form-group mt-3">
-                <label for="ApiKey">API Key</label>
-                <input type="text" class="form-control" id="ApiKey" name="ApiKey" value="xKiZSdNbp5M54gA5p7Xv" />
+                <label for="apiKeyExport">API Key</label>
+                <input type="text" class="form-control" id="apiKeyExport" name="apiKeyExport" value="xKiZSdNbp5M54gA5p7Xv" />
             </div>
             <div class="form-group mt-3">
-                <label for="BaseUrl">Base URL</label>
-                <input type="text" class="form-control" id="BaseUrl" name="BaseUrl" value="http://localhost:8080" />
+                <label for="baseUrlExport">Base URL</label>
+                <input type="text" class="form-control" id="baseUrlExport" name="baseUrlExport" value="http://localhost:8080" />
             </div>
         </div>
         <div class="flex-fill p-5 mb-4 bg-body-tertiary rounded-3" id="export-container">
+            <h2 class="text-center mb-2">Export server</h2>
             <div class="form-group mt-3">
-                <label for="ApiKey">API Key</label>
-                <input type="text" class="form-control" id="ApiKey" name="ApiKey" value="xKiZSdNbp5M54gA5p7Xv" />
+                <label for="apiKeyImport">API Key</label>
+                <input type="text" class="form-control" id="apiKeyImport" name="apiKeyImport" value="xKiZSdNbp5M54gA5p7Xv" />
             </div>
             <div class="form-group mt-3">
-                <label for="BaseUrl">Base URL</label>
-                <input type="text" class="form-control" id="BaseUrl" name="BaseUrl" value="http://localhost:8080" />
+                <label for="baseUrlImport">Base URL</label>
+                <input type="text" class="form-control" id="baseUrlImport" name="baseUrlImport" value="http://localhost:8080" />
             </div>
         </div>
     </div>
-     <div class="d-flex justify-content-center">
+    <div class="d-flex justify-content-center">
         <button type="submit" class="btn btn-block w-50 btn-primary">Next step</button>
     </div>
 </form>
+
+<script>
+    $(document).ready(function() {
+        $('#apiKeyForm').submit(function(event) {
+            event.preventDefault();
+
+            var apiKeyModel = {
+                apiKeyExport: $('#apiKeyExport').val(),
+                baseUrlExport: $('#baseUrlExport').val(),
+                apiKeyImport: $('#apiKeyImport').val(),
+                baseUrlImport: $('#baseUrlImport').val()
+            };
+
+            $.ajax({
+                url: '/Migration/SaveApiKey',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(apiKeyModel),
+                success: function(response) {
+                    if (response.success) {
+                        loadStepContent(2);
+                    } else {
+                        alert('Failed to save API keys.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('An error occurred while saving API keys.');
+                }
+            });
+        });
+    });
+</script>

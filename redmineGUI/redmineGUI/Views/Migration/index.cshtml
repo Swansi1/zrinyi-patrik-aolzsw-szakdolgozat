@@ -1,1 +1,26 @@
 <div class="alert alert-info">@TempData["DebugMessage"]</div>
+
+
+@model List<RedmineIssue>
+
+<h2>Redmine Issues</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Subject</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var issue in Model)
+        {
+            <tr>
+                <td>@issue.Id</td>
+                <td>@issue.Subject</td>
+                <td>@issue.Description</td>
+            </tr>
+        }
+    </tbody>
+</table>

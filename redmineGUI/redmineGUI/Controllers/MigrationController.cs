@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using redmineGUI.Models;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -10,9 +11,11 @@ public class MigrationController : Controller
 {
     private static ApiKeyModel _apiKeyModel;
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
-        return View();
+        var issues = await GetIssuesAsync(_apiKeyModel.baseUrlExport, _apiKeyModel.apiKeyExport);
+
+        return View(issues);
     }
 
     [HttpGet]
@@ -32,37 +35,53 @@ public class MigrationController : Controller
     }
 
     [HttpPost]
-    public IActionResult SaveApiKey(ApiKeyModel model)
+    public async Task<IActionResult> SaveApiKey([FromBody] ApiKeyModel model)
     {
         _apiKeyModel = model;
 
-        // Set a debug message
-        TempData["DebugMessage"] =_apiKeyModel.ApiKey;
-
-        // Redirect to Index action
-        return RedirectToAction("Index");
+        // Return success response
+        return Json(new { success = true, message = "API keys saved successfully.", apikeyModel= _apiKeyModel });
     }
 
-    // [HttpGet]
-    // public async Task<IActionResult> GetUsers()
-    // {
-    //     if (_apiKeyModel == null)
-    //     {
-    //         return BadRequest("API Key is not set.");
-    //     }
+    public async Task<List<RedmineIssue>> GetIssuesAsync(string baseUrl, string apiKey)
+    {
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("X-Redmine-API-Key", apiKey);
+            HttpResponseMessage response = await client.GetAsync($"{baseUrl}/issues.json");
 
-    //     // var users = await FetchUsersFromRedmine();
-    //     // return PartialView("_Users", users);
-    // }
+            if (response.IsSuccessStatusCode)
+            {
+                string responseData = await response.Content.ReadAsStringAsync();
+                var issuesResponse = JsonConvert.DeserializeObject<IssuesResponse>(responseData);
+                return issuesResponse.Issues;
+            }
+            else
+            {
+                // Handle error response
+                return new List<RedmineIssue>();
+            }
+        }
+    }
 
-    // private async Task<List<RedmineUser>> FetchUsersFromRedmine()
-    // {
-    //     var client = new HttpClient();
-    //     client.DefaultRequestHeaders.Add("X-Redmine-API-Key", _apiKeyModel.ApiKey);
-    //     var response = await client.GetAsync($"{_apiKeyModel.BaseUrl}/users.json");
-    //     var content = await response.Content.ReadAsStringAsync();
-    //     var json = JObject.Parse(content);
-    //     var users = json["users"].ToObject<List<RedmineUser>>();
-    //     return users;
-    // }
+    [HttpGet]
+    public async Task<IActionResult> GetProjects(int offset = 0, int limit = 50)
+    {
+        using (HttpClient client = new HttpClient())
+        {
+            client.DefaultRequestHeaders.Add("X-Redmine-API-Key", _apiKeyModel.apiKeyExport);
+            HttpResponseMessage response = await client.GetAsync($"{_apiKeyModel.baseUrlExport}/projects.json?offset={offset}&limit={limit}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                string responseData = await response.Content.ReadAsStringAsync();
+                var projectsResponse = JsonConvert.DeserializeObject<RedmineProjectsResponse>(responseData);
+                return Ok(projectsResponse.Projects);
+            }
+            else
+            {
+                return StatusCode((int)response.StatusCode, response.ReasonPhrase);
+            }
+        }
+    }
 }
