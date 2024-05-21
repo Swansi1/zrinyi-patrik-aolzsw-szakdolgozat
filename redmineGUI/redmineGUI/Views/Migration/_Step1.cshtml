@@ -6,7 +6,7 @@
             <h2 class="text-center mb-2">Import server</h2>
             <div class="form-group mt-3">
                 <label for="apiKeyExport">API Key</label>
-                <input type="text" class="form-control" id="apiKeyExport" name="apiKeyExport" value="xKiZSdNbp5M54gA5p7Xv" />
+                <input type="text" class="form-control" id="apiKeyExport" name="apiKeyExport" value="b09a101016f122d3fd02ec31cbe55a8a4fd11a26" />
             </div>
             <div class="form-group mt-3">
                 <label for="baseUrlExport">Base URL</label>
@@ -17,7 +17,7 @@
             <h2 class="text-center mb-2">Export server</h2>
             <div class="form-group mt-3">
                 <label for="apiKeyImport">API Key</label>
-                <input type="text" class="form-control" id="apiKeyImport" name="apiKeyImport" value="xKiZSdNbp5M54gA5p7Xv" />
+                <input type="text" class="form-control" id="apiKeyImport" name="apiKeyImport" value="b09a101016f122d3fd02ec31cbe55a8a4fd11a26" />
             </div>
             <div class="form-group mt-3">
                 <label for="baseUrlImport">Base URL</label>
@@ -48,6 +48,7 @@
                 contentType: 'application/json',
                 data: JSON.stringify(apiKeyModel),
                 success: function(response) {
+                    console.log(response)
                     if (response.success) {
                         loadStepContent(2);
                     } else {

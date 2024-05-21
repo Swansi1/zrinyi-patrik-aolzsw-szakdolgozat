@@ -1,7 +1,7 @@
 <h2 class="text-center">Projects</h2>
 <h3 class="text-center">Selected project will be exported to the new redmine server</h3>
 
-<form id="apiKeyForm" class="mt-3">
+<form id="projectsForm" class="mt-3">
     <div class="d-flex flex-row justify-content-center gap-5">
         <div class="flex-fill mb-4 pt-5 bg-body-tertiary rounded-3">
             <h2 class="text-center mb-2">Import server</h2>
@@ -33,6 +33,7 @@
             url: `/migration/GetProjects?offset=${offset}&limit=${limit}`,
             method: 'GET',
             success: function(data) {
+                console.log(data);
                 const projectsList = $('#importProjectContainer');
                 data.forEach(project => {
                     projectsList.append(addProject(project));
@@ -96,6 +97,35 @@
                     $(this).show();
                 } else {
                     $(this).hide();
+                }
+            });
+        });
+
+        $('#projectsForm').submit(function(event) {
+            event.preventDefault();
+
+            let checkedValues = [];
+            const checkboxes = document.querySelectorAll('input[name="exportProjects"]:checked');
+            
+            checkboxes.forEach(function(checkbox) {
+                checkedValues.push(checkbox.value);
+            });
+
+            $.ajax({
+                url: '/Migration/SaveProjects',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ ProjectIds: checkedValues }),
+                success: function(response) {
+                    console.log(response)
+                    if (response.success) {
+                        loadStepContent(3);
+                    } else {
+                        alert('Failed to save projects.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('An error occurred while saving projects.');
                 }
             });
         });
