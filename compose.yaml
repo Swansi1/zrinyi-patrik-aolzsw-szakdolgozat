@@ -17,20 +17,16 @@ services:
       REDMINE_SECRET_KEY_BASE: supersecretkey
     depends_on:
       - db
-      
+
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: phpmyadmin
-    restart: always
-    ports:
-      - "8081:80"
     environment:
       PMA_HOST: db
-      PMA_USER: root
-      PMA_PASSWORD: rootpassword
-      MYSQL_ROOT_PASSWORD: example
-    depends_on:
-      - db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: example
+    ports:
+      - "8081:80"
 
   db:
     image: mariadb

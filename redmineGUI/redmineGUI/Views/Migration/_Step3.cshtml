@@ -25,11 +25,11 @@
         const isDisabled = type === 'import' ? 'disabled' : '';
         return `
         <div data-user-id='${user.id}' data-user-firstname='${user.firstname}'
-            data-user-lastname='${user.lastname}' data-user-admin='${user.admin}'>
+            data-user-lastname='${user.lastname}' data-user-admin='${user.admin}' data-user-mail='${user.mail}'>
             <input class="list-group-item-check pe-none" type="checkbox" name="${type}Users" id="project${user.id}${type}" value="${user.id}" ${isDisabled}>
             <label class="list-group-item rounded-3 py-3" for="project${user.id}${type}">
                 ${user.id} - ${user.firstname} ${user.lastname}
-                <span class="d-block small opacity-50">${user.admin}</span>
+                <span class="d-block small opacity-50">mail: ${user.mail} | IsAdmin: ${user.admin}</span>
             </label>
         </div>
         `;
@@ -72,6 +72,7 @@
             const firstname = userDiv.data('user-firstname');
             const lastname = userDiv.data('user-lastname');
             const admin = userDiv.data('user-admin');
+            const userMail = userDiv.data('user-mail');
             console.log(userId, firstname, lastname, admin);
 
             if (this.checked) {
@@ -79,7 +80,8 @@
                     id: userId,
                     firstname: firstname,
                     lastname: lastname,
-                    admin: admin
+                    admin: admin,
+                    mail: userMail
                 }, 'import'));
             } else {
                 $('#exportUsersContainer').find(`[data-user-id='${userId}']`).remove();
@@ -92,11 +94,43 @@
                 console.log($(this).data('user-firstname'));
                 const userLastname = $(this).data('user-lastname').toLowerCase();
                 const userFirstname = $(this).data('user-firstname').toLowerCase();
-                const userId = $(this).data('user-id');
-                if (userFirstname.includes(searchTerm) || userLastname.includes(searchTerm) || userId.includes(searchTerm)) {
+                const userMail = $(this).data('user-mail').toLowerCase();
+                const userId = $(this).data('user-id').toString();
+                if (userFirstname.includes(searchTerm) || userLastname.includes(searchTerm) || userId.includes(searchTerm) || userMail.includes(searchTerm)) {
                     $(this).show();
                 } else {
                     $(this).hide();
+                }
+            });
+        });
+
+        $('#usersform').submit(function(event) {
+            event.preventDefault();
+
+            let checkedValues = [];
+            const checkboxes = document.querySelectorAll('input[name="exportUsers"]:checked');
+            console.log(checkboxes);
+            checkboxes.forEach(function(checkbox) {
+                checkedValues.push(checkbox.value);
+            });
+
+            console.log(checkedValues);
+
+            $.ajax({
+                url: '/Migration/SaveUsers',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ UserIds: checkedValues }),
+                success: function(response) {
+                    console.log(response)
+                    if (response.success) {
+                        loadStepContent(4);
+                    } else {
+                        alert('Failed to save users.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('An error occurred while saving users.');
                 }
             });
         });

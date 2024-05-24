@@ -18,7 +18,9 @@ namespace redmineGUI.Controllers;
 public class MigrationController : Controller
 {
     private static ApiKeyModel _apiKeyModel;
-    private static List<int> SelectedProjectIds = new List<int>();
+    private static List<int> _redmineProjectIds = new List<int>();
+    private static List<int> _redmineUsersId = new List<int>();
+    private static List<int> _redmineStatusId = new List<int>();
 
     public async Task<IActionResult> Index()
     {
@@ -38,6 +40,8 @@ public class MigrationController : Controller
                 return PartialView("_Step2");
             case 3:
                 return PartialView("_Step3");
+            case 4:
+                return PartialView("_Step4");
             default:
                 return PartialView("_DefaultStep");
         }
@@ -59,9 +63,33 @@ public class MigrationController : Controller
             return BadRequest(model.ProjectIds);
         }
 
-        SelectedProjectIds.AddRange(model.ProjectIds);
+        _redmineProjectIds.AddRange(model.ProjectIds);
 
         return Ok(new { success = true, message = "Selected projects saved successfully." });
+    }
+
+    [HttpPost]
+    public IActionResult SaveUsers([FromBody] RedmineSelectedUsersModel model)
+    {
+        if (model?.UserIds == null || model.UserIds.Count == 0)
+        {
+            return BadRequest(model.UserIds);
+        }
+
+        return Ok(new { success = true, message = "Selected users saved successfully." });
+    }
+
+    [HttpPost]
+    public IActionResult SaveStatus([FromBody] RedmineSelectedStatusModel model)
+    {
+        if (model?.StatusIds == null || model.StatusIds.Count == 0)
+        {
+            return BadRequest(model.StatusIds);
+        }
+
+        _redmineStatusId = model.StatusIds.Distinct().ToList();
+
+        return Ok(new { success = true, message = "Selected statuses saved successfully."});
     }
 
     public async Task<List<RedmineIssue>> GetIssuesAsync()
@@ -121,6 +149,33 @@ public class MigrationController : Controller
                 string responseData = await response.Content.ReadAsStringAsync();
                 var projectsResponse = JsonConvert.DeserializeObject<RedmineUsersResponse>(responseData);
                 return Ok(projectsResponse.Users);
+            }
+            catch (HttpRequestException e)
+            {
+                return StatusCode(500, "Internal server error");
+            }
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetIssueStatuses()
+    {
+        using (HttpClient client = new HttpClient())
+        {
+            try
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, $"{_apiKeyModel.baseUrlExport}/issue_statuses.json");
+                request.Headers.Add("X-Redmine-API-Key", _apiKeyModel.apiKeyExport);
+                var response = await client.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return StatusCode((int)response.StatusCode, "Failed to retrieve issue statuses from Redmine");
+                }
+
+                string responseData = await response.Content.ReadAsStringAsync();
+                var issueStatusesResponse = JsonConvert.DeserializeObject<RedmineIssueStatusesResponse>(responseData);
+                return Ok(issueStatusesResponse.IssueStatuses);
             }
             catch (HttpRequestException e)
             {

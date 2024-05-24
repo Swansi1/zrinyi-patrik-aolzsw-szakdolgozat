@@ -10,11 +10,5 @@ public class RedmineIssue
     public int AssignedToId { get; set; }
 
     [JsonProperty("status")]
-    public Status Status { get; set; }
-}
-
-    public class Status
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
+    public RedmineIssueStatus Status { get; set; }
 }
