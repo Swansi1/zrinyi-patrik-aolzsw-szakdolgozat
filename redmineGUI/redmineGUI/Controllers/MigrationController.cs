@@ -83,6 +83,7 @@ public class MigrationController : Controller
             return BadRequest(model.ProjectIds);
         }
 
+        _redmineProjectIds.Clear();
         _redmineProjectIds.AddRange(model.ProjectIds);
 
         return Ok(new { success = true, message = "Selected projects saved successfully." });
@@ -96,6 +97,7 @@ public class MigrationController : Controller
             return BadRequest(model.UserIds);
         }
 
+        _redmineUsersId.Clear();
         _redmineUsersId.AddRange(model.UserIds);
 
         return Ok(new { success = true, message = "Selected users saved successfully." });
@@ -109,6 +111,7 @@ public class MigrationController : Controller
             return BadRequest(model.StatusIds);
         }
 
+        _redmineStatusId.Clear();
         _redmineStatusId = model.StatusIds.Distinct().ToList();
 
         return Ok(new { success = true, message = "Selected statuses saved successfully."});
