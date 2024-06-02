@@ -23,3 +23,9 @@ public class RedmineUsersResponse
     [JsonProperty("users")]
     public List<RedmineUser> Users { get; set; }
 }
+
+public class RedmineUserResponse
+{
+    [JsonProperty("User")]
+    public RedmineUser User { get; set; }
+}
