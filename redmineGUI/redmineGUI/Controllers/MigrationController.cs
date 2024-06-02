@@ -46,6 +46,8 @@ public class MigrationController : Controller
                 return PartialView("_Step4");
             case 5:
                 return PartialView("_Step5");
+            case 6:
+                return PartialView("_Step6");
             default:
                 return PartialView("_DefaultStep");
         }
