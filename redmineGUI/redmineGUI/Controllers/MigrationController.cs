@@ -12,6 +12,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.IO.Compression;
+using System.IO;
+using System.Text.Json;
 
 namespace redmineGUI.Controllers;
 
@@ -21,6 +24,7 @@ public class MigrationController : Controller
     private static List<int> _redmineProjectIds = new List<int>();
     private static List<int> _redmineUsersId = new List<int>();
     private static List<int> _redmineStatusId = new List<int>();
+    private static List<List<int>> _redmineUsersMap = new List<List<int>>();
 
     private static RedmineApiController _redmineApiController;
 
@@ -117,6 +121,20 @@ public class MigrationController : Controller
         return Ok(new { success = true, message = "Selected statuses saved successfully."});
     }
 
+    [HttpPost]
+    public IActionResult SaveConflictUsers([FromBody] RedmineUsersMappedModel model)
+    {
+        if (model?.Users == null || model.Users.Count == 0)
+        {
+            return BadRequest(model.Users);
+        }
+
+        _redmineUsersMap.Clear();
+        _redmineUsersMap = model.Users;
+
+        return Ok(new { success = true, message = "Selected statuses saved successfully." });
+    }
+
     public async Task<List<RedmineIssue>> GetIssuesAsync()
     {
         using (HttpClient client = new HttpClient())
@@ -165,11 +183,63 @@ public class MigrationController : Controller
         foreach (var userId in _redmineUsersId) {
             RedmineUser user = await _redmineApiController.GetUserById(RedmineApiController.TYPE_IMPORT, userId);
             var userExist = exportServerUsers.FirstOrDefault(u => u.Mail == user.Mail);
-            if (userExist == null) {
+            if (userExist != null) {
                 conflictUser.Add(user);
             }
         }
 
         return Ok(new { success = true, conflictUser = conflictUser, exportServerUsers = exportServerUsers });
+    }
+
+    [HttpGet]
+    public IActionResult DownloadJsonFiles()
+    {
+        var files = new Dictionary<string, object>
+        {
+            { "users.json", CreateJsonFromList(_redmineUsersMap) },
+            { "statuses.json", CreateJsonFromList(_redmineStatusId) },
+            { "projects.json", CreateJsonFromList(_redmineProjectIds) }
+        };
+
+        using (var memoryStream = new MemoryStream())
+        {
+            using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+            {
+                foreach (var file in files)
+                {
+                    var entry = archive.CreateEntry(file.Key);
+                    using (var entryStream = entry.Open())
+                    using (var streamWriter = new StreamWriter(entryStream))
+                    {
+                        var json = System.Text.Json.JsonSerializer.Serialize(file.Value);
+                        streamWriter.Write(json);
+                    }
+                }
+            }
+
+            return File(memoryStream.ToArray(), "application/zip", "json-files.zip");
+        }
+    }
+
+    private Dictionary<int, object> CreateJsonFromList(List<int> list)
+    {
+        var dictionary = new Dictionary<int, object>();
+        foreach (var item in list)
+        {
+            dictionary[item] = null;
+        }
+
+        return dictionary;
+    }
+
+    private Dictionary<int, object> CreateJsonFromList(List<List<int>> list)
+    {
+        var dictionary = new Dictionary<int, object>();
+        foreach (var innerList in list)
+        {
+            dictionary[innerList[0]] = innerList[1];
+        }
+
+        return dictionary;
     }
 }

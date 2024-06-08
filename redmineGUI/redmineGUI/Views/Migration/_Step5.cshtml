@@ -24,7 +24,7 @@
                             ${user.mail} - ${user.firstname} ${user.lastname}
                     </div>
                     <div>
-                        <select class="form-select" name="userNewAccount${user.id}" aria-label="Select new user">
+                        <select class="form-select new-user-select" data-import-user-id='${user.id}' name="userNewAccount${user.id}" aria-label="Select new user">
                                 ${userOptions}
                         </select>
                     </div>
@@ -45,7 +45,6 @@
                     data.conflictUser.forEach(user => {
                         conflictContainer.append(addUserConflict(user));
                     });
- 
                 },
                 error: function (err) {
                     console.error('Error fetching users:', err);
@@ -57,8 +56,30 @@
 
         $('#userConflictForm').submit(function (event) {
             event.preventDefault();
-            
-            // TODO save conflicted users and load download step
+
+            let userList = [];
+            $('.new-user-select').each(function () {
+                const importUserId = $(this).data('import-user-id');
+                userList.push([importUserId, parseInt($(this).val())]);
+            });
+
+            $.ajax({
+                url: '/Migration/SaveConflictUsers',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ Users: userList }),
+                success: function (response) {
+                    console.log(response)
+                    if (response.success) {
+                        loadStepContent(6);
+                    } else {
+                        alert('Failed to save user conflict.');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert('An error occurred while saving user conflict.');
+                }
+            });
         });
     });
 </script>
