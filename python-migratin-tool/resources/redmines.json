@@ -1,0 +1,14 @@
+{
+    "source": {
+        "ip": "",
+        "username": "",
+        "password": "",
+        "identifier": ""
+    },
+    "destination": {
+        "ip": "",
+        "username": "",
+        "password": "",
+        "identifier": ""
+    }
+}
