@@ -2,13 +2,11 @@
     "source": {
         "ip": "",
         "username": "",
-        "password": "",
-        "identifier": ""
+        "password": ""
     },
     "destination": {
         "ip": "",
         "username": "",
-        "password": "",
-        "identifier": ""
+        "password": ""
     }
 }
