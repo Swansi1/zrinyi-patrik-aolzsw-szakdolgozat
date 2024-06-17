@@ -44,6 +44,25 @@ class Controller:
             statuses_json = json.load(statuses_file)
         return statuses_json["statuses"]
 
+    def trackers_migration(self, database, tracker_ids, status_ids):
+        database = Database(database["host"], database["user"], database["password"], database["database"])
+        workflows = database.get_workflows(tracker_ids)
+        
+        try:
+            for workflow in workflows:
+                print(workflow['tracker_id'])
+                print(tracker_ids[str(workflow['tracker_id'])])
+                new_tracker_id = database.insert_workflow(workflow, tracker_ids[str(workflow['tracker_id'])], status_ids[str(workflow['old_status_id'])], status_ids[str(workflow['new_status_id'])])
+                print(new_tracker_id)
+                tracker_ids[str(workflow['tracker_id'])] = new_tracker_id
+                
+            for tracker_id in tracker_ids:
+                print(tracker_id)
+        except Exception as e:
+            print(e)
+            
+        return tracker_ids
+        
     def connect_to_source_server(self, source):
         source_server = Server(source["ip"], source["username"], source["password"])
         source_project = source_server.redmine.project.get(source["identifier"])

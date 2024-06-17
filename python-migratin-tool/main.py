@@ -3,9 +3,6 @@ from controller import Controller
 print("Begin migration")
 controller = Controller()
 
-# TODO le kell kérni a státuszokat, majd a workflow-ot hozzá és át kell rakni a másik redmine-ba.
-# TODO Issue helyes hivatkozás
-
 print("Load configuration files...")
 redmine_projects = controller.read_redmine_projects()
 redmines = controller.read_redmines_json()
@@ -13,6 +10,8 @@ database = controller.read_database_json()
 users_ids = controller.read_users_json()
 tracker_ids = controller.read_trackers_json()
 status_ids = controller.read_statuses_json()
+
+tracker_ids = controller.trackers_migration(database, tracker_ids, status_ids)
 
 for source, destination in redmine_projects.items():
     redmineSource = redmines["source"]
