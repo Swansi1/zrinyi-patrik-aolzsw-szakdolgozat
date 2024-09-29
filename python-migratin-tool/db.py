@@ -1,12 +1,14 @@
 import mysql.connector
 
 class Database:
-    def __init__(self, host, user, pwd, database) -> None:
+    def __init__(self, host, user, pwd, database, port) -> None:
         self.mydb = mysql.connector.connect(
             host=host,
             user=user,
             password=pwd,
-            database=database
+            database=database,
+            port=port,
+            collation='utf8mb4_general_ci'
         )
 
     def update_journal(self, date, user_id, id):

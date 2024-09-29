@@ -12,7 +12,6 @@ class Controller:
         self.destination_server = ""
         self.destination_project = ""
         self.issue_ids_map = {}
-        NEW_ISSUE_SUBJECT = "Initialize issue for migration"
 
     def read_redmine_projects(self):
         with open('./resources/projects.json') as redmine_projects_file:
@@ -32,7 +31,7 @@ class Controller:
     def read_users_json(self):
         with open('./resources/users.json') as users_file:
             users_json = json.load(users_file)
-        return users_json["users"]
+        return users_json
 
     def read_trackers_json(self):
         with open('./resources/trackers.json') as trackers_file:
@@ -42,10 +41,10 @@ class Controller:
     def read_statuses_json(self):
         with open('./resources/statuses.json') as statuses_file:
             statuses_json = json.load(statuses_file)
-        return statuses_json["statuses"]
+        return statuses_json
 
     def trackers_migration(self, database, tracker_ids, status_ids):
-        database = Database(database["host"], database["user"], database["password"], database["database"])
+        database = Database(database["host"], database["user"], database["password"], database["database"], database["port"])
         workflows = database.get_workflows(tracker_ids)
         
         try:
@@ -97,27 +96,8 @@ class Controller:
             journals[issue.id] = issue.journals
         return journals
 
-    def initialize_issue(self):
-        issue = self.destination_server.redmine.issue.new()
-        issue.project_id = self.destination_project.id
-        issue.subject = self.NEW_ISSUE_SUBJECT
-        issue.save()
-
-    def get_new_issue_ids(self):
-        issues = self.destination_server.redmine.issue.filter(
-            status_id='*'
-        )
-        issue = issues[0]
-
-        if issue.subject == self.NEW_ISSUE_SUBJECT:
-            next_issue_id = issue.id + 1
-            issue_ids = {}
-            for issue in self.issues_from_source:
-                issue_ids[issue.id] = next_issue_id
-                next_issue_id += 1
-            return issue_ids
-
     def create_issues(self):
+        issue_ids = {}
         for old_issue in self.issues_from_source:
             subject = old_issue.subject
             description = old_issue.description
@@ -133,6 +113,9 @@ class Controller:
             issue.subject = subject
             issue.description = description
             issue.save()
+            issue_ids[old_issue.id] = issue.id
+
+        self.issue_ids_map = issue_ids
 
     def update_issue_description_references(self, description, issue_ids):
         pattern = r"#(\d+)"
@@ -149,18 +132,17 @@ class Controller:
 
         return description
 
-
-    def upload_historys(self, journals, tracker_ids, status_ids, issue_ids, user_ids):
+    def upload_historys(self, journals, tracker_ids, status_ids, user_ids):
         for issue in self.issues_from_source:
             for journal in journals[issue.id]:
-                redmine_issue = self.destination_server.redmine.issue.get(issue_ids[issue.id])
+                redmine_issue = self.destination_server.redmine.issue.get(self.issue_ids_map[issue.id])
                 isUpdated = False
                 for detail in journal.details:
                     if detail["property"] == "attachment":
                         for attachment in issue.attachments:
                             if str(attachment.id) == detail["name"]:
                                 self.upload_attachment(redmine_issue, attachment)
-                    if self.updater(redmine_issue, detail["name"], detail["new_value"], tracker_ids, status_ids, user_ids, issue_ids):
+                    if self.journal_updater(redmine_issue, detail["name"], detail["new_value"], tracker_ids, status_ids, user_ids):
                         isUpdated = True
                 if isUpdated:
                     redmine_issue.notes = str(issue.id) + ":" + str(journal["id"])
@@ -186,8 +168,7 @@ class Controller:
         # update issue with the token
         issue.uploads = [{"token": token, "filename": filename, "content_type": content_type, "description": description}]
 
-
-    def updater(self, issue, name, value, tracker_ids, status_ids, user_ids, issue_ids):
+    def journal_updater(self, issue, name, value, tracker_ids, status_ids, user_ids):
         if name == "tracker_id":
             tracker_id = tracker_ids[value]
             issue.tracker_id = tracker_id
@@ -204,7 +185,7 @@ class Controller:
             assigned = user_ids[value]
             issue.assigned_to_id = assigned
         elif name == "parent_id":
-            parent_id = issue_ids[int(value)]
+            parent_id = self.issue_ids_map[int(value)]
             issue.parent_issue_id = parent_id
         elif name == "start_date":
             issue.start_date = value
@@ -221,10 +202,10 @@ class Controller:
             return False
         return True
 
-    def update_issues(self, issue_ids,  user_ids, tracker_ids, status_ids):
+    def update_issues(self, user_ids, tracker_ids, status_ids):
         for old_issue in self.issues_from_source:
             try:
-                new_parent_id = issue_ids[old_issue.parent.id]
+                new_parent_id = self.issue_ids_map[old_issue.parent.id]
             except:
                 new_parent_id = None
             try:
@@ -240,10 +221,10 @@ class Controller:
             except:
                 new_status_id = None
 
-            description = self.update_issue_description_references(old_issue.description, issue_ids)
+            description = self.update_issue_description_references(old_issue.description, self.issue_ids_map)
 
             self.destination_server.redmine.issue.update(
-                issue_ids[old_issue.id],
+                self.issue_ids_map[old_issue.id],
                 description = description,
                 tracker_id = new_tracker_id,
                 status_id = new_status_id,
@@ -256,7 +237,7 @@ class Controller:
                 estimated_hours = old_issue.estimated_hours
             )
 
-            issue = self.destination_server.redmine.issue.get(issue_ids[old_issue.id])
+            issue = self.destination_server.redmine.issue.get(self.issue_ids_map[old_issue.id])
             for attachment in old_issue.attachments:
                 is_set = False
                 for attach in issue.attachments:
@@ -267,7 +248,7 @@ class Controller:
                     issue.save()
 
     def update_journals(self, database, original_journals, users_ids):
-        database = Database(database["host"], database["user"], database["password"], database["database"])
+        database = Database(database["host"], database["user"], database["password"], database["database"], database["port"])
         for new_issue in self.destination_project.issues:
             for new_journal in new_issue.journals:
                 if new_journal["notes"] != "":
