@@ -48,7 +48,6 @@
                 contentType: 'application/json',
                 data: JSON.stringify(apiKeyModel),
                 success: function(response) {
-                    console.log(response)
                     if (response.success) {
                         loadStepContent(2);
                     } else {

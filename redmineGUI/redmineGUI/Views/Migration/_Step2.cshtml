@@ -33,7 +33,6 @@
             url: `/migration/GetProjects?offset=${offset}&limit=${limit}`,
             method: 'GET',
             success: function(data) {
-                console.log(data);
                 const projectsList = $('#importProjectContainer');
                 data.forEach(project => {
                     projectsList.append(addProject(project));
@@ -117,7 +116,6 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ ProjectIds: checkedValues }),
                 success: function(response) {
-                    console.log(response)
                     if (response.success) {
                         loadStepContent(3);
                     } else {

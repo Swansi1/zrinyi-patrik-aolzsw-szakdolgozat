@@ -36,7 +36,6 @@
                 url: `/Migration/GetUserConflict`,
                 method: 'GET',
                 success: function (data) {
-                    console.log(data);
                     data.exportServerUsers.forEach(user => {
                         userOptions += `<option value="${user.id}">${user.mail} - ${user.firstname} ${user.lastname}</option>`;
                     });
@@ -69,7 +68,6 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ Users: userList }),
                 success: function (response) {
-                    console.log(response)
                     if (response.success) {
                         loadStepContent(6);
                     } else {

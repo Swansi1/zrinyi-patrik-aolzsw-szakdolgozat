@@ -47,11 +47,9 @@
                 url: `/Migration/GetUsers?offset=${offset}&limit=${limit}`,
                 method: 'GET',
                 success: function(data) {
-                    console.log(data);
                     if (Array.isArray(data)) {
                         const userList = $('#importUsersContainer');
                         data.forEach(user => {
-                            console.log(user);
                             userList.append(addUsers(user));
                         });
                         offset += limit;
@@ -70,13 +68,11 @@
         $(document).on('change', 'input[name="exportUsers"]', function() {
 
             const userDiv = $(this).closest('div');
-            console.log(userDiv);
             const userId = userDiv.data('user-id');
             const firstname = userDiv.data('user-firstname');
             const lastname = userDiv.data('user-lastname');
             const admin = userDiv.data('user-admin');
             const userMail = userDiv.data('user-mail');
-            console.log(userId, firstname, lastname, admin);
 
             if (this.checked) {
                 exportUserContainer.append(addUsers({
@@ -94,7 +90,6 @@
         $('#search').on('input', function() {
             const searchTerm = $(this).val().toLowerCase();
             $('#importUsersContainer > div').each(function() {
-                console.log($(this).data('user-firstname'));
                 const userLastname = $(this).data('user-lastname').toLowerCase();
                 const userFirstname = $(this).data('user-firstname').toLowerCase();
                 const userMail = $(this).data('user-mail').toLowerCase();
@@ -112,12 +107,9 @@
 
             let checkedValues = [];
             const checkboxes = document.querySelectorAll('input[name="exportUsers"]:checked');
-            console.log(checkboxes);
             checkboxes.forEach(function(checkbox) {
                 checkedValues.push(checkbox.value);
             });
-
-            console.log(checkedValues);
 
             $.ajax({
                 url: '/Migration/SaveUsers',
@@ -125,7 +117,6 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ UserIds: checkedValues }),
                 success: function(response) {
-                    console.log(response)
                     if (response.success) {
                         loadStepContent(4);
                     } else {

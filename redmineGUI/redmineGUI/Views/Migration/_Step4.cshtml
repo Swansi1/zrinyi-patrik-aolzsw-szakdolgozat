@@ -39,7 +39,6 @@
                 url: `/Migration/GetIssueStatuses?type=0`,
                 method: 'GET',
                 success: function(data) {
-                    console.log(data);
                     if (!Array.isArray(data)) {
                         console.error('Unexpected data format:', data);
                         return;
@@ -61,7 +60,6 @@
                 url: `/Migration/GetIssueStatuses?type=1`,
                 method: 'GET',
                 success: function(data) {
-                    console.log(data);
                     if (!Array.isArray(data)) {
                         console.error('Unexpected data format:', data);
                         return;
@@ -90,8 +88,6 @@
                 const importStatusId = $(this).data('import-status-id');
                 statusMap.push([importStatusId, parseInt($(this).val())]);
             });
-            
-            console.log(statusMap);
 
             $.ajax({
                 url: '/Migration/SaveStatus',
@@ -99,7 +95,6 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ StatusIds: statusMap }),
                 success: function(response) {
-                    console.log(response)
                     if (response.success) {
                         loadStepContent(5);
                     } else {
