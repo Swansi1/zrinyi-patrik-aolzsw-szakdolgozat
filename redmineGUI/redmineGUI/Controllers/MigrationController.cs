@@ -23,7 +23,7 @@ public class MigrationController : Controller
     private static ApiKeyModel _apiKeyModel;
     private static List<int> _redmineProjectIds = new List<int>();
     private static List<int> _redmineUsersId = new List<int>();
-    private static List<int> _redmineStatusId = new List<int>();
+    private static List<List<int>> _redmineStatusId = new List<List<int>>();
     private static List<List<int>> _redmineUsersMap = new List<List<int>>();
 
     private static RedmineApiController _redmineApiController;
@@ -116,9 +116,9 @@ public class MigrationController : Controller
         }
 
         _redmineStatusId.Clear();
-        _redmineStatusId = model.StatusIds.Distinct().ToList();
+        _redmineStatusId = model.StatusIds;
 
-        return Ok(new { success = true, message = "Selected statuses saved successfully."});
+        return Ok(new {success = true, message = "Selected statuses saved successfully."});
     }
 
     [HttpPost]
@@ -132,7 +132,7 @@ public class MigrationController : Controller
         _redmineUsersMap.Clear();
         _redmineUsersMap = model.Users;
 
-        return Ok(new { success = true, message = "Selected statuses saved successfully." });
+        return Ok(new {success = true, message = "Selected statuses saved successfully." });
     }
 
     public async Task<List<RedmineIssue>> GetIssuesAsync()
@@ -170,9 +170,13 @@ public class MigrationController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetIssueStatuses()
+    public async Task<IActionResult> GetIssueStatuses(int type = 0)
     {
-        return Ok(await _redmineApiController.GetIssueStatus(RedmineApiController.TYPE_IMPORT));
+        return Ok(await _redmineApiController.GetIssueStatus(
+                type == 0 ?
+                RedmineApiController.TYPE_IMPORT :
+                RedmineApiController.TYPE_EXPORT
+            ));
     }
 
     [HttpGet]

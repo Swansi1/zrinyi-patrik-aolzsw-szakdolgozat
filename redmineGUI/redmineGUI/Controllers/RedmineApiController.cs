@@ -24,7 +24,7 @@ namespace redmineGUI.Controllers
         public async Task<List<RedmineUser>> GetUsers(int type, int offset = 0, int limit = 50)
         {
             var server = this.GetServerType(type);
-            string urlParams = this.GetUrlParamsLimit(offset, limit);
+            string urlParams = GetUrlParamsLimit(offset, limit);
 
             using (HttpClient client = new HttpClient())
             {
@@ -67,7 +67,7 @@ namespace redmineGUI.Controllers
         public async Task<List<RedmineProject>> GetProjects(int type, int offset = 0, int limit = 50)
         {
             var server = this.GetServerType(type);
-            string urlParams = this.GetUrlParamsLimit(offset, limit);
+            string urlParams = GetUrlParamsLimit(offset, limit);
 
             using (HttpClient client = new HttpClient())
             {
@@ -87,7 +87,7 @@ namespace redmineGUI.Controllers
 
         public async Task<List<RedmineIssueStatus>> GetIssueStatus(int type)
         {
-            var server = this.GetServerType(type);
+            var server = GetServerType(type);
 
             using (HttpClient client = new HttpClient())
             {
@@ -108,15 +108,10 @@ namespace redmineGUI.Controllers
 
         private RedmineServerModel GetServerType(int Type)
         {
-            if (Type == 0)
-            {
-                return this._importServer;
-            }
-
-            return this._exportServer;
+            return Type == 0 ? this._importServer : this._exportServer;
         }
 
-        private string GetUrlParamsLimit(int offset, int limit)
+        private static string GetUrlParamsLimit(int offset, int limit)
         {
             string urlParams = $"?offset={offset}&limit={limit}";
             if (offset == -1 || limit == -1)

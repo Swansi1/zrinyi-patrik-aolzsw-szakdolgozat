@@ -5,116 +5,99 @@
     <div class="d-flex flex-row flex-wrap justify-content-center gap-5">
         <div class="flex-fill mb-4 pt-5 bg-body-tertiary rounded-3">
             <h2 class="text-center mb-2">Import server</h2>
-            <div class="w-100 px-5">
-                <input type="text" id="search" class="form-control" placeholder="Search status">
-            </div>
-            <div class="d-flex flex-column flex-md-row gap-4 py-5 align-items-center justify-content-center">
-                <div id="importStatusContainer" class="list-group list-group-checkable d-grid gap-2 border-0"></div>
-            </div>
-        </div>
-         <div class="flex-fill mb-4 pt-5 bg-body-tertiary rounded-3">
-            <h2 class="text-center mb-2">Export server</h2>
-            <div class="d-flex flex-column flex-md-row gap-4 py-5 align-items-center justify-content-center">
-                <div id="exportStatusContainer" class="list-group list-group-checkable d-grid gap-2 border-0"></div>
-            </div>
+            <div id="statusMapContainer" class="d-flex flex-column flex-fill gap-3 py-md-5 align-items-center justify-content-center"></div>
         </div>
     </div>
     <div class="d-flex justify-content-center">
         <button type="submit" class="btn btn-block w-50 btn-primary">Next step</button>
     </div>
 </form>
+
 <script>
-    function addStatus(status, type = 'export') {
-        const isDisabled = type === 'import' ? 'disabled' : '';
-        return `
-        <div data-status-id='${status.id}' data-status-name='${status.name}'
-            data-status-isclosed='${status.isClosed}' data-status-isdefault='${status.isDefault}'>
-            <input class="list-group-item-check pe-none" type="checkbox" name="${type}Status" id="status${status.id}${type}" value="${status.id}" ${isDisabled}>
-            <label class="list-group-item rounded-3 py-3" for="status${status.id}${type}">
-                ${status.id} - ${status.name}
-                <span class="d-block small opacity-50">IsDefault: ${status.isDefault} | isClosed: ${status.isClosed}</span>
-            </label>
-        </div>
-        `;
-    }
-
     $(document).ready(function() {
-        let offset = 0;
-        const limit = 50;
+        let exportServerOptions = "";
 
+        function addStatus(status) {
+            return `
+                <div class="d-flex flex-row w-75 align-items-center gap-5 p-3 rounded bg-dark">
+                    <div class="w-100">${status.id} - ${status.name} | IsDefault: ${status.isDefault} | IsClosed: ${status.isClosed} </div>
+                    <div class="flex-shrink-1">
+                        <select
+                            class="form-select status-select"
+                            data-import-status-id='${status.id}'
+                            name="statusMap[${status.id}]"
+                            aria-label="Select new status"
+                        >
+                                ${exportServerOptions}
+                        </select>
+                    </div>
+                </div>`;
+        }
+    
         function loadStatus() {
             $.ajax({
-                url: `/Migration/GetIssueStatuses?offset=${offset}&limit=${limit}`,
+                url: `/Migration/GetIssueStatuses?type=0`,
                 method: 'GET',
                 success: function(data) {
                     console.log(data);
-                    if (Array.isArray(data)) {
-                        const statusList = $('#importStatusContainer');
-                        data.forEach(status => {
-                            statusList.append(addStatus(status));
-                        });
-                        offset += limit;
-                    } else {
+                    if (!Array.isArray(data)) {
                         console.error('Unexpected data format:', data);
+                        return;
                     }
+
+                    const conflictContainer = $('#statusMapContainer');
+                    data.forEach(status => {
+                        conflictContainer.append(addStatus(status));
+                    });
                 },
                 error: function(err) {
                     console.error('Error fetching status::', err);
                 }
             });
         }
-        loadStatus();
 
-        const exportStatusContainer = $('#exportStatusContainer');
-        $(document).on('change', 'input[name="exportStatus"]', function() {
+        function loadExportServerStatus() {
+            $.ajax({
+                url: `/Migration/GetIssueStatuses?type=1`,
+                method: 'GET',
+                success: function(data) {
+                    console.log(data);
+                    if (!Array.isArray(data)) {
+                        console.error('Unexpected data format:', data);
+                        return;
+                    }
 
-            const statusContainer = $(this).closest('div');
-            const statusId = statusContainer.data('status-id');
-            const statusName = statusContainer.data('status-name');
-            const statusIsClosed = statusContainer.data('status-isclosed');
-            const statusIsDefault = statusContainer.data('status-isdefault');
+                    data.forEach(status => {
+                        exportServerOptions += `<option value="${status.id}">${status.id} - ${status.name} | IsDefault: ${status.isDefault}</option>`;
+                    });
 
-            if (this.checked) {
-                exportStatusContainer.append(addStatus({
-                    id: statusId,
-                    name: statusName,
-                    isClosed: statusIsClosed,
-                    isDefault: statusIsDefault
-                }, 'import'));
-            } else {
-                $('#exportStatusContainer').find(`[data-status-id='${statusId}']`).remove();
-            }
-        });
-
-        $('#search').on('input', function() {
-            const searchTerm = $(this).val().toLowerCase();
-            $('#importStatusContainer > div').each(function() {
-                console.log($(this).data('status-firstname'));
-                const statusId = $(this).data('status-id').toString();
-                const statusName = $(this).data('status-name').toLowerCase();
-                if (statusId.includes(searchTerm) || statusName.includes(searchTerm)) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
+                    loadStatus();
+                },
+                error: function(err) {
+                    console.error('Error fetching status::', err);
                 }
             });
-        });
+        }
+
+        loadExportServerStatus();
 
         $('#statusForm').submit(function(event) {
             event.preventDefault();
 
-            let checkedValues = [];
-            const checkboxes = document.querySelectorAll('input[name="exportStatus"]:checked');
-            console.log(checkboxes);
-            checkboxes.forEach(function(checkbox) {
-                checkedValues.push(checkbox.value);
+
+            let statusMap = [];
+            $('.status-select').each(function () {
+                const importStatusId = $(this).data('import-status-id');
+                statusMap.push([importStatusId, parseInt($(this).val())]);
             });
+            
+            console.log(statusMap);
 
             $.ajax({
                 url: '/Migration/SaveStatus',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ StatusIds: checkedValues }),
+                data: JSON.stringify({ StatusIds: statusMap }),
                 success: function(response) {
                     console.log(response)
                     if (response.success) {
