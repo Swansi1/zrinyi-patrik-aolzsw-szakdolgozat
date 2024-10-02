@@ -104,6 +104,27 @@ namespace redmineGUI.Controllers
 
                 return new List<RedmineIssueStatus>{};
             }
+        }
+        
+        public async Task<List<RedmineTrackers>> GetTrackers(int type)
+        {
+            var server = GetServerType(type);
+
+            using (HttpClient client = new HttpClient())
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, $"{server.BaseUrl}/trackers.json");
+                request.Headers.Add("X-Redmine-API-Key", server.ApiKey);
+                var response = await client.SendAsync(request);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseData = await response.Content.ReadAsStringAsync();
+                    var trackersResponse = JsonConvert.DeserializeObject<RedmineTrackersResponse>(responseData);
+                    return trackersResponse.Trackers;
+                }
+
+                return new List<RedmineTrackers>{};
+            }
         } 
 
         private RedmineServerModel GetServerType(int Type)

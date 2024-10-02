@@ -1,12 +1,83 @@
-<div class="success-animation my-5">
-    <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52"><circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none" /><path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" /></svg>
-</div>
+<h2 class="text-center">User conflicts</h2>
+<h4 class="text-center">These users do not have registered accounts on the export server.</h4>
 
-<div class="text-center">
-    <h2>We have successfully created the configuration files for the migration.</h2>
-    <h3>Download .json config file</h3>
-</div>
+<form id="userConflictForm" class="mt-3">
+    <div class="d-flex flex-row flex-wrap justify-content-center gap-5">
+        <div class="flex-fill mb-4 pt-5 bg-body-tertiary rounded-3">
+            <h2 class="text-center mb-2">Import server</h2>
+            <div id="userConflictContainer" class="d-flex flex-column flex-fill gap-3 py-md-5 align-items-center justify-content-center"></div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-center">
+        <button type="submit" class="btn btn-block w-50 btn-primary">Next step</button>
+    </div>
+</form>
 
-<div class="d-flex justify-content-center mt-5">
-    <a class="btn btn-block btn-outline-success w-50" href="/migration/downloadJsonFiles">Download .json files</a>
-</div>
+<script>
+    $(document).ready(function () {
+        let userOptions = "";
+
+        function addUserConflict(user) {
+            return `
+                <div class="d-flex flex-row w-75 align-items-center justify-content-evenly gap-5 p-3 rounded bg-dark">
+                    <div>
+                            ${user.mail} - ${user.firstname} ${user.lastname}
+                    </div>
+                    <div>
+                        <select class="form-select new-user-select" data-import-user-id='${user.id}' name="userNewAccount${user.id}" aria-label="Select new user">
+                                ${userOptions}
+                        </select>
+                    </div>
+                </div>`;
+        }
+
+        function loadConflict() {
+            $.ajax({
+                url: `/Migration/GetUserConflict`,
+                method: 'GET',
+                success: function (data) {
+                    data.exportServerUsers.forEach(user => {
+                        userOptions += `<option value="${user.id}">${user.mail} - ${user.firstname} ${user.lastname}</option>`;
+                    });
+
+                    const conflictContainer = $('#userConflictContainer');
+                    data.conflictUser.forEach(user => {
+                        conflictContainer.append(addUserConflict(user));
+                    });
+                },
+                error: function (err) {
+                    console.error('Error fetching users:', err);
+                }
+            });
+        }
+        loadConflict();
+
+
+        $('#userConflictForm').submit(function (event) {
+            event.preventDefault();
+
+            let userList = [];
+            $('.new-user-select').each(function () {
+                const importUserId = $(this).data('import-user-id');
+                userList.push([importUserId, parseInt($(this).val())]);
+            });
+
+            $.ajax({
+                url: '/Migration/SaveConflictUsers',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ Users: userList }),
+                success: function (response) {
+                    if (response.success) {
+                        loadStepContent(7);
+                    } else {
+                        alert('Failed to save user conflict.');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    alert('An error occurred while saving user conflict.');
+                }
+            });
+        });
+    });
+</script>

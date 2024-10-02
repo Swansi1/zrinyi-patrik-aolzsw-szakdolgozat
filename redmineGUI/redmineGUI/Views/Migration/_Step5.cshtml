@@ -1,11 +1,11 @@
-<h2 class="text-center">User conflicts</h2>
-<h4 class="text-center">These users do not have registered accounts on the export server.</h4>
+<h2 class="text-center">Trackers</h2>
+<h4 class="text-center">Selected trackers will be migrated to the new redmine server</h4>
 
-<form id="userConflictForm" class="mt-3">
+<form id="trackerForm" class="mt-3">
     <div class="d-flex flex-row flex-wrap justify-content-center gap-5">
         <div class="flex-fill mb-4 pt-5 bg-body-tertiary rounded-3">
             <h2 class="text-center mb-2">Import server</h2>
-            <div id="userConflictContainer" class="d-flex flex-column flex-fill gap-3 py-md-5 align-items-center justify-content-center"></div>
+            <div id="trackerMapContainer" class="d-flex flex-column flex-fill gap-3 py-md-5 align-items-center justify-content-center"></div>
         </div>
     </div>
     <div class="d-flex justify-content-center">
@@ -14,68 +14,95 @@
 </form>
 
 <script>
-    $(document).ready(function () {
-        let userOptions = "";
+    $(document).ready(function() {
+        let exportServerOptions = "";
 
-        function addUserConflict(user) {
+        function addTracker(tracker) {
             return `
-                <div class="d-flex flex-row w-75 align-items-center justify-content-evenly gap-5 p-3 rounded bg-dark">
-                    <div>
-                            ${user.mail} - ${user.firstname} ${user.lastname}
-                    </div>
-                    <div>
-                        <select class="form-select new-user-select" data-import-user-id='${user.id}' name="userNewAccount${user.id}" aria-label="Select new user">
-                                ${userOptions}
+                <div class="d-flex flex-row w-75 align-items-center gap-5 p-3 rounded bg-dark">
+                    <div class="w-100">${tracker.id} - ${tracker.name} </div>
+                    <div class="flex-shrink-1">
+                        <select
+                            class="form-select tracker-select"
+                            data-import-tracker-id='${tracker.id}'
+                            name="trackerMap[${tracker.id}]"
+                            aria-label="Select new tracker"
+                        >
+                                ${exportServerOptions}
                         </select>
                     </div>
                 </div>`;
         }
-
-        function loadConflict() {
+    
+        function loadTrackers() {
             $.ajax({
-                url: `/Migration/GetUserConflict`,
+                url: `/Migration/GetTrackers?type=0`,
                 method: 'GET',
-                success: function (data) {
-                    data.exportServerUsers.forEach(user => {
-                        userOptions += `<option value="${user.id}">${user.mail} - ${user.firstname} ${user.lastname}</option>`;
-                    });
+                success: function(data) {
+                    if (!Array.isArray(data)) {
+                        console.error('Unexpected data format:', data);
+                        return;
+                    }
 
-                    const conflictContainer = $('#userConflictContainer');
-                    data.conflictUser.forEach(user => {
-                        conflictContainer.append(addUserConflict(user));
+                    const conflictContainer = $('#trackerMapContainer');
+                    data.forEach(tracker => {
+                        conflictContainer.append(addTracker(tracker));
                     });
                 },
-                error: function (err) {
-                    console.error('Error fetching users:', err);
+                error: function(err) {
+                    console.error('Error fetching tracker::', err);
                 }
             });
         }
-        loadConflict();
 
+        function loadExportServerTrackers() {
+            $.ajax({
+                url: `/Migration/GetTrackers?type=1`,
+                method: 'GET',
+                success: function(data) {
+                    if (!Array.isArray(data)) {
+                        console.error('Unexpected data format:', data);
+                        return;
+                    }
 
-        $('#userConflictForm').submit(function (event) {
+                    data.forEach(tracker => {
+                        exportServerOptions += `<option value="${tracker.id}">${tracker.id} - ${tracker.name}</option>`;
+                    });
+
+                    loadTrackers();
+                },
+                error: function(err) {
+                    console.error('Error fetching tracker::', err);
+                }
+            });
+        }
+
+        loadExportServerTrackers();
+
+        $('#trackerForm').submit(function(event) {
             event.preventDefault();
 
-            let userList = [];
-            $('.new-user-select').each(function () {
-                const importUserId = $(this).data('import-user-id');
-                userList.push([importUserId, parseInt($(this).val())]);
+
+            let trackerMap = [];
+            $('.tracker-select').each(function () {
+                const importTrackerId = $(this).data('import-tracker-id');
+                trackerMap.push([importTrackerId, parseInt($(this).val())]);
             });
 
             $.ajax({
-                url: '/Migration/SaveConflictUsers',
+                url: '/Migration/SaveTracker',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ Users: userList }),
-                success: function (response) {
+                data: JSON.stringify({ trackerIds: trackerMap }),
+                success: function(response) {
                     if (response.success) {
                         loadStepContent(6);
                     } else {
-                        alert('Failed to save user conflict.');
+                        alert('Failed to save tracker.');
                     }
                 },
-                error: function (xhr, status, error) {
-                    alert('An error occurred while saving user conflict.');
+                error: function(xhr, status, error) {
+                    alert('An error occurred while saving tracker.');
                 }
             });
         });

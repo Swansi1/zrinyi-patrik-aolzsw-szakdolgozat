@@ -25,6 +25,7 @@ public class MigrationController : Controller
     private static List<int> _redmineUsersId = new List<int>();
     private static List<List<int>> _redmineStatusId = new List<List<int>>();
     private static List<List<int>> _redmineUsersMap = new List<List<int>>();
+    private static List<List<int>> _redmineTrackerId = new List<List<int>>();
 
     private static RedmineApiController _redmineApiController;
 
@@ -52,6 +53,8 @@ public class MigrationController : Controller
                 return PartialView("_Step5");
             case 6:
                 return PartialView("_Step6");
+            case 7:
+                return PartialView("_Step7");
             default:
                 return PartialView("_DefaultStep");
         }
@@ -120,6 +123,20 @@ public class MigrationController : Controller
 
         return Ok(new {success = true, message = "Selected statuses saved successfully."});
     }
+    
+    [HttpPost]
+    public IActionResult SaveTracker([FromBody] RedmineSelectedTrackerModel model)
+    {
+        if (model?.TrackerIds == null || model.TrackerIds.Count == 0)
+        {
+            return BadRequest(model.TrackerIds);
+        }
+
+        _redmineTrackerId.Clear();
+        _redmineTrackerId = model.TrackerIds;
+
+        return Ok(new {success = true, message = "Selected trackers saved successfully."});
+    }
 
     [HttpPost]
     public IActionResult SaveConflictUsers([FromBody] RedmineUsersMappedModel model)
@@ -180,6 +197,16 @@ public class MigrationController : Controller
     }
 
     [HttpGet]
+    public async Task<IActionResult> GetTrackers(int type = 0)
+    {
+        return Ok(await _redmineApiController.GetTrackers(
+            type == 0 ?
+                RedmineApiController.TYPE_IMPORT :
+                RedmineApiController.TYPE_EXPORT
+        ));
+    }
+
+    [HttpGet]
     public async Task<IActionResult> GetUserConflict()
     {
         List<RedmineUser> conflictUser = new List<RedmineUser>();
@@ -202,7 +229,8 @@ public class MigrationController : Controller
         {
             { "users.json", CreateJsonFromList(_redmineUsersMap) },
             { "statuses.json", CreateJsonFromList(_redmineStatusId) },
-            { "projects.json", CreateJsonFromList(_redmineProjectIds) }
+            { "projects.json", CreateJsonFromList(_redmineProjectIds) },
+            { "trackers.json", CreateJsonFromList(_redmineTrackerId) }
         };
 
         using (var memoryStream = new MemoryStream())
