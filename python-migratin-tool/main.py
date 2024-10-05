@@ -55,4 +55,4 @@ if __name__ == "__main__":
             need_validate = True
             print("Validation mode:")
 
-        redmine_migration(need_validate)
+    redmine_migration(need_validate)

@@ -11,10 +11,10 @@ class Database:
             collation='utf8mb4_general_ci'
         )
 
-    def update_journal(self, date, user_id, id):
+    def update_journal(self, date, user_id, id, new_note):
         mycursor = self.mydb.cursor()
-        sql = "UPDATE journals SET created_on = %s, user_id = %s WHERE id = %s"
-        val = (date, user_id, id)
+        sql = "UPDATE journals SET created_on = %s, user_id = %s, notes = %s WHERE id = %s"
+        val = (date, user_id, new_note, id)
 
         mycursor.execute(sql, val)
         self.mydb.commit()

@@ -13,6 +13,7 @@ class Controller:
         self.destination_server = ""
         self.destination_project = ""
         self.issue_ids_map = {}
+        self.__status_change_migraiton = "STATUS_CHANGE_MIGRATION:"
         self.setup_logging()
 
     def read_redmine_projects(self):
@@ -83,14 +84,10 @@ class Controller:
     def create_issues(self):
         issue_ids = {}
         for old_issue in self.issues_from_source:
-            subject = old_issue.subject
-            description = old_issue.description
-            for journal in old_issue.journals:
-                for detail in journal.details:
-                    if detail["name"] == "subject":
-                        subject = detail["old_value"]
-                    elif detail["name"] == "description":
-                        description = detail["old_value"]
+            subject = next((detail["old_value"] for journal in old_issue.journals for detail in journal.details if
+                            detail["name"] == "subject"), old_issue.subject)
+            description = next((detail["old_value"] for journal in old_issue.journals for detail in journal.details if
+                                detail["name"] == "description"), old_issue.description)
 
             issue = self.destination_server.redmine.issue.new()
             issue.project_id = self.destination_project.id
@@ -102,15 +99,15 @@ class Controller:
 
         self.issue_ids_map = issue_ids
 
-    def update_issue_description_references(self, description, issue_ids):
+    def update_issue_description_references(self, description):
         pattern = r"#(\d+)"
         match = re.search(pattern, description)
         if match:
             old_issue_id = int(match.group(1))
-            if old_issue_id in issue_ids:
-                new_issue_ref = issue_ids[old_issue_id]
+            if old_issue_id in self.issue_ids_map:
+                new_issue_ref = self.issue_ids_map[old_issue_id]
             else:
-                new_issue_ref = old_issue_id + " (not migrated)"
+                new_issue_ref = str(old_issue_id) + " (not migrated)"
 
             updated_description = re.sub(pattern, r"#{}".format(new_issue_ref), description)
             return updated_description
@@ -121,16 +118,26 @@ class Controller:
         for issue in self.issues_from_source:
             for journal in journals[issue.id]:
                 redmine_issue = self.destination_server.redmine.issue.get(self.issue_ids_map[issue.id])
-                isUpdated = False
+                is_modified = False
+
+                if journal.notes != "":
+                    redmine_issue.notes = self.update_issue_description_references(journal["notes"]) + "STATUS_CHANGE_MIGRATION:" + str(issue.id) + ":" + str(journal["id"])
+                    is_modified = True
+
+                # Status changes or attach files
                 for detail in journal.details:
                     if detail["property"] == "attachment":
                         for attachment in issue.attachments:
                             if str(attachment.id) == detail["name"]:
                                 self.upload_attachment(redmine_issue, attachment)
                     if self.journal_updater(redmine_issue, detail["name"], detail["new_value"], tracker_ids, status_ids, user_ids):
-                        isUpdated = True
-                if isUpdated:
-                    redmine_issue.notes = str(issue.id) + ":" + str(journal["id"])
+                        is_modified = True
+
+                    if detail["name"] == "status_id":
+                        is_modified = True
+                        redmine_issue.notes = "STATUS_CHANGE_MIGRATION:" + str(issue.id) + ":" + str(journal["id"])
+
+                if is_modified:
                     redmine_issue.save()
 
     def upload_attachment(self, issue, attachment):
@@ -152,6 +159,7 @@ class Controller:
 
         # update issue with the token
         issue.uploads = [{"token": token, "filename": filename, "content_type": content_type, "description": description}]
+        logging.info("Attachment uploaded: " + str(attachment.id))
 
     def journal_updater(self, issue, name, value, tracker_ids, status_ids, user_ids):
         if name == "tracker_id":
@@ -203,7 +211,7 @@ class Controller:
             except:
                 new_status_id = None
 
-            description = self.update_issue_description_references(old_issue.description, self.issue_ids_map)
+            description = self.update_issue_description_references(old_issue.description)
 
             self.destination_server.redmine.issue.update(
                 self.issue_ids_map[old_issue.id],
@@ -229,21 +237,23 @@ class Controller:
                 if not is_set:
                     self.upload_attachment(issue, attachment)
                     issue.save()
-                    logging.info("Attachment uploaded: " + str(attachment.id) + " -> " + str(attach.id))
 
     def update_journals(self, database, original_journals, users_ids):
         database = Database(database["host"], database["user"], database["password"], database["database"], database["port"])
         for new_issue in self.destination_project.issues:
             for new_journal in new_issue.journals:
-                if new_journal["notes"] != "":
-                    notes = new_journal["notes"].split(":")
-                    o_issue_id = int(notes[0])
-                    o_journal_id = int(notes[1])-1
+                if self.__status_change_migraiton in new_journal.notes:
+                    split_string = new_journal.notes.split(self.__status_change_migraiton)[-1]
+                    ids = split_string.split(':')
+                    o_issue_id, o_journal_id = int(ids[0]), int(ids[1])
+                    journal = self.issues_from_source.get(o_issue_id).journals.get(o_journal_id)
+
+                    new_journal.notes = new_journal.notes.replace(self.__status_change_migraiton + str(o_issue_id) + ":" + str(o_journal_id), "")
                     try:
-                        journal = original_journals[o_issue_id][o_journal_id]
-                        database.update_journal(journal["created_on"], users_ids[str(journal["user"]["id"])], new_journal["id"])
-                        logging.info("Journal updated: " + str(o_issue_id) + ":" + str(o_journal_id) + " -> " + str(new_journal["id"]))
-                    except:
+                        database.update_journal(journal.created_on, users_ids[str(journal.user.id)], new_journal.id, new_journal.notes)
+                        logging.info("Journal updated: " + str(o_issue_id) + ":" + str(o_journal_id) + " -> " + str(new_journal.id))
+                    except Exception as e:
+                        logging.error(e)
                         print("The journals does not found. Issue's id: " + str(o_issue_id) + ", journal's id: " + str(o_journal_id))
 
     def setup_logging(self):
