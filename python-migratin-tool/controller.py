@@ -3,6 +3,7 @@ from db import Database
 import json
 import requests
 import re
+import logging
 
 class Controller:
     def __init__(self) -> None:
@@ -12,6 +13,7 @@ class Controller:
         self.destination_server = ""
         self.destination_project = ""
         self.issue_ids_map = {}
+        self.setup_logging()
 
     def read_redmine_projects(self):
         with open('./resources/projects.json') as redmine_projects_file:
@@ -36,32 +38,13 @@ class Controller:
     def read_trackers_json(self):
         with open('./resources/trackers.json') as trackers_file:
             trackers_json = json.load(trackers_file)
-        return trackers_json["trackers"]
+        return trackers_json
 
     def read_statuses_json(self):
         with open('./resources/statuses.json') as statuses_file:
             statuses_json = json.load(statuses_file)
         return statuses_json
 
-    def trackers_migration(self, database, tracker_ids, status_ids):
-        database = Database(database["host"], database["user"], database["password"], database["database"], database["port"])
-        workflows = database.get_workflows(tracker_ids)
-        
-        try:
-            for workflow in workflows:
-                print(workflow['tracker_id'])
-                print(tracker_ids[str(workflow['tracker_id'])])
-                new_tracker_id = database.insert_workflow(workflow, tracker_ids[str(workflow['tracker_id'])], status_ids[str(workflow['old_status_id'])], status_ids[str(workflow['new_status_id'])])
-                print(new_tracker_id)
-                tracker_ids[str(workflow['tracker_id'])] = new_tracker_id
-                
-            for tracker_id in tracker_ids:
-                print(tracker_id)
-        except Exception as e:
-            print(e)
-            
-        return tracker_ids
-        
     def connect_to_source_server(self, source):
         source_server = Server(source["ip"], source["username"], source["password"])
         source_project = source_server.redmine.project.get(source["identifier"])
@@ -88,6 +71,7 @@ class Controller:
         project.is_public = old_project.is_public
         project.inherit_members = old_project.inherit_members
         project.save()
+        logging.info("Project created: " + old_project.identifier + " -> " + project.identifier)
         return project.identifier
 
     def get_journals(self):
@@ -114,6 +98,7 @@ class Controller:
             issue.description = description
             issue.save()
             issue_ids[old_issue.id] = issue.id
+            logging.info("Issue created: " + str(old_issue.id) + " -> " + str(issue.id))
 
         self.issue_ids_map = issue_ids
 
@@ -177,16 +162,13 @@ class Controller:
         elif name == "description":
             issue.description = value
         elif name == "status_id":
-            status_id = status_ids[value]
-            issue.status_id = status_id
+            issue.status_id = status_ids[value]
         elif name == "priority_id":
             issue.priority_id = value
         elif name == "assigned_to_id":
-            assigned = user_ids[value]
-            issue.assigned_to_id = assigned
+            issue.assigned_to_id = user_ids[value]
         elif name == "parent_id":
-            parent_id = self.issue_ids_map[int(value)]
-            issue.parent_issue_id = parent_id
+            issue.parent_issue_id = self.issue_ids_map[int(value)]
         elif name == "start_date":
             issue.start_date = value
         elif name == "due_date":
@@ -236,6 +218,7 @@ class Controller:
                 parent_issue_id = new_parent_id,
                 estimated_hours = old_issue.estimated_hours
             )
+            logging.info("Issue updated: " + str(old_issue.id) + " -> " + str(self.issue_ids_map[old_issue.id]))
 
             issue = self.destination_server.redmine.issue.get(self.issue_ids_map[old_issue.id])
             for attachment in old_issue.attachments:
@@ -246,6 +229,7 @@ class Controller:
                 if not is_set:
                     self.upload_attachment(issue, attachment)
                     issue.save()
+                    logging.info("Attachment uploaded: " + str(attachment.id) + " -> " + str(attach.id))
 
     def update_journals(self, database, original_journals, users_ids):
         database = Database(database["host"], database["user"], database["password"], database["database"], database["port"])
@@ -258,5 +242,32 @@ class Controller:
                     try:
                         journal = original_journals[o_issue_id][o_journal_id]
                         database.update_journal(journal["created_on"], users_ids[str(journal["user"]["id"])], new_journal["id"])
+                        logging.info("Journal updated: " + str(o_issue_id) + ":" + str(o_journal_id) + " -> " + str(new_journal["id"]))
                     except:
                         print("The journals does not found. Issue's id: " + str(o_issue_id) + ", journal's id: " + str(o_journal_id))
+
+    def setup_logging(self):
+        logging.basicConfig(filename='migration.log', level=logging.INFO,
+                            format='%(asctime)s - %(levelname)s - %(message)s')
+
+    def validate_migration(self, database):
+        database = Database(database["host"], database["user"], database["password"], database["database"], database["port"])
+        redmine_settings = database.get_redmine_settings()
+
+        rest_api_enabled = [setting for setting in redmine_settings if setting["name"] == "rest_api_enabled"]
+        if len(rest_api_enabled) > 0 and rest_api_enabled[0]["value"] == "1":
+            print("REST API is enabled")
+        else:
+            print("REST API is disabled, enable it!")
+            return
+
+        attachment_max_size = [setting for setting in redmine_settings if setting["name"] == "attachment_max_size"]
+        print("Attachment max size: " + attachment_max_size[0]["value"])
+
+        attachment_extensions_allowed = [setting for setting in redmine_settings if setting["name"] == "attachment_extensions_allowed"]
+        if len(attachment_extensions_allowed) > 0 and attachment_extensions_allowed[0]["value"] != "":
+            print("Attachment extensions allowed: " + attachment_extensions_allowed[0]["value"])
+
+        attachment_extensions_denied = [setting for setting in redmine_settings if setting["name"] == "attachment_extensions_denied"]
+        if len(attachment_extensions_denied) > 0 and attachment_extensions_denied[0]["value"] != "":
+            print("Attachment extensions denied: " + attachment_extensions_denied[0]["value"])
