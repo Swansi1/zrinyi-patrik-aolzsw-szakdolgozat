@@ -1,2 +1,3 @@
-python-redmine
-mysql-connector-python
+python-redmine~=2.5.0
+mysql-connector-python~=9.0.0
+requests~=2.32.3

@@ -31,7 +31,7 @@ def redmine_migration(validation):
 
         if validation:
             print("Validation...")
-            return controller.validate_migration(database)
+            return controller.validate_migration(database, users_ids)
 
         # Jornals = hozzászólások + státusz változások
         journals = controller.get_journals()

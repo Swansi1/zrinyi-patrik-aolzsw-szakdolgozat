@@ -260,7 +260,7 @@ class Controller:
         logging.basicConfig(filename='migration.log', level=logging.INFO,
                             format='%(asctime)s - %(levelname)s - %(message)s')
 
-    def validate_migration(self, database):
+    def validate_migration(self, database, user_map):
         database = Database(database["host"], database["user"], database["password"], database["database"], database["port"])
         redmine_settings = database.get_redmine_settings()
 
@@ -270,6 +270,15 @@ class Controller:
         else:
             print("REST API is disabled, enable it!")
             return
+
+        user_ids = {issue.author.id for issue in self.issues_from_source}
+        for issue in self.issues_from_source:
+            user_ids.update(journal.user.id for journal in issue.journals)
+        user_ids = list(user_ids)
+
+        for user_id in user_ids:
+            if str(user_id) not in user_map.keys():
+                print("User with id: " + str(user_id) + " does not exist in the destination server!")
 
         attachment_max_size = [setting for setting in redmine_settings if setting["name"] == "attachment_max_size"]
         print("Attachment max size: " + attachment_max_size[0]["value"])
