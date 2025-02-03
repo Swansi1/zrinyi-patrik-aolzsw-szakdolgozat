@@ -1,16 +1,9 @@
 services:
-  # web:
-  #   build: aspnetapp
-  #   ports:
-  #     - 80:8080
-  #   volumes:
-  #     - ./aspnetapp:/src
-
   redmine:
     image: redmine
-    restart: always
+    restart: unless-stopped
     ports:
-      - 8080:3000
+      - 8000:3000
     environment:
       REDMINE_DB_MYSQL: db
       REDMINE_DB_PASSWORD: example
@@ -26,13 +19,11 @@ services:
       MYSQL_USER: root
       MYSQL_PASSWORD: example
     ports:
-      - "8081:80"
+      - "8001:80"
 
   db:
     image: mariadb
-    restart: always
-    ports:
-      - 3306:3306
+    restart: unless-stopped
     environment:
       MARIADB_ROOT_PASSWORD: example
       MYSQL_DATABASE: redmine

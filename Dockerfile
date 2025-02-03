@@ -1,19 +1,16 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG TARGETARCH
-WORKDIR /source
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
 
-# copy csproj and restore as distinct layers
-COPY redmineGUI/redmineGUI/*.csproj .
-RUN dotnet restore -a $TARGETARCH
+COPY ["redmineGUI/redmineGUI/redmineGUI.csproj", "redmineGUI/"]
+RUN dotnet restore "redmineGUI/redmineGUI.csproj"
 
-# copy and publish app and libraries
-COPY redmineGUI/redmineGUI/. .
-RUN dotnet publish -a $TARGETARCH --no-restore -o /app
+COPY redmineGUI/ ./redmineGUI/
+WORKDIR "/src/redmineGUI"
+RUN dotnet publish -c Release -o /app/publish
 
-# final stage/image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
-EXPOSE 8080
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-jammy-chiseled AS final
 WORKDIR /app
-COPY --from=build /app .
-USER $APP_UID
-ENTRYPOINT ["./redmineGUI"]
+COPY --from=build /app/publish .
+EXPOSE 8080
+ENV ASPNETCORE_HTTP_PORTS=8080
+ENTRYPOINT ["dotnet", "redmineGUI.dll"]
