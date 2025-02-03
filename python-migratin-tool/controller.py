@@ -278,7 +278,7 @@ class Controller:
 
         for user_id in user_ids:
             if str(user_id) not in user_map.keys():
-                print("User with id: " + str(user_id) + " does not exist in the destination server!")
+                print("User with id: " + str(user_id) + ". does not exist in the destination server!")
 
         attachment_max_size = [setting for setting in redmine_settings if setting["name"] == "attachment_max_size"]
         print("Attachment max size: " + attachment_max_size[0]["value"])
