@@ -5,23 +5,23 @@
         <div class="flex-fill p-5 mb-4 bg-body-tertiary rounded-3" id="import-container">
             <h2 class="text-center mb-2">Import server</h2>
             <div class="form-group mt-3">
-                <label for="apiKeyExport">API Key</label>
-                <input type="text" class="form-control" id="apiKeyExport" name="apiKeyExport" placeholder="API Key" />
+                <input asp-for="ApiKeyImport" class="form-control" placeholder="API Key" />
+                <span asp-validation-for="ApiKeyImport" class="text-danger"></span>
             </div>
             <div class="form-group mt-3">
-                <label for="baseUrlExport">Base URL</label>
-                <input type="text" class="form-control" id="baseUrlExport" name="baseUrlExport" placeholder="Base URL" />
+                <input asp-for="BaseUrlImport" class="form-control" placeholder="Base URL" />
+                <span asp-validation-for="BaseUrlImport" class="text-danger"></span>
             </div>
         </div>
         <div class="flex-fill p-5 mb-4 bg-body-tertiary rounded-3" id="export-container">
             <h2 class="text-center mb-2">Export server</h2>
             <div class="form-group mt-3">
-                <label for="apiKeyImport">API Key</label>
-                <input type="text" class="form-control" id="apiKeyImport" name="apiKeyImport" placeholder="API Key" />
+                <input asp-for="ApiKeyExport" class="form-control" placeholder="API Key" />
+                <span asp-validation-for="ApiKeyExport" class="text-danger"></span>
             </div>
             <div class="form-group mt-3">
-                <label for="baseUrlImport">Base URL</label>
-                <input type="text" class="form-control" id="baseUrlImport" name="baseUrlImport" placeholder="Base URL" />
+                <input asp-for="BaseUrlExport" class="form-control" placeholder="Base URL" />
+                <span asp-validation-for="BaseUrlExport" class="text-danger"></span>
             </div>
         </div>
     </div>
@@ -31,33 +31,56 @@
 </form>
 
 <script>
-    $(document).ready(function() {
-        $('#apiKeyForm').submit(function(event) {
-            event.preventDefault();
+    $(function(){
+        $('#apiKeyForm').on('submit', function(e){
+            e.preventDefault();
+            // clear old validation state
+            $('.is-invalid').removeClass('is-invalid');
+            $('.field-validation-error').text('');
 
-            var apiKeyModel = {
-                apiKeyExport: $('#apiKeyExport').val(),
-                baseUrlExport: $('#baseUrlExport').val(),
-                apiKeyImport: $('#apiKeyImport').val(),
-                baseUrlImport: $('#baseUrlImport').val()
+            const model = {
+                ApiKeyExport: $('#ApiKeyExport').val(),
+                BaseUrlExport: $('#BaseUrlExport').val(),
+                ApiKeyImport: $('#ApiKeyImport').val(),
+                BaseUrlImport: $('#BaseUrlImport').val()
             };
 
             $.ajax({
                 url: '/Migration/SaveApiKey',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify(apiKeyModel),
-                success: function(response) {
-                    if (response.success) {
+                data: JSON.stringify(model),
+                success: function(resp){
+                    if (resp.success) {
                         loadStepContent(2);
                     } else {
-                        alert('Failed to save API keys.');
+                        // this branch usually won’t run; validation comes back as 400
+                        showErrors(resp.errors);
                     }
                 },
-                error: function(xhr, status, error) {
-                    alert('An error occurred while saving API keys.');
+                error: function(xhr){
+                    if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.errors) {
+                        showErrors(xhr.responseJSON.errors);
+                    } else {
+                        alert('An unexpected error occurred.');
+                    }
                 }
             });
         });
+
+        function showErrors(errors) {
+            // errors is a dictionary: { ApiKeyExport: ["msg1"], BaseUrlImport: ["msgA","msgB"] }
+            $.each(errors, function(field, messages){
+                // find the input and the validation span
+                var input = $('[name="' + field + '"]');
+                var span  = $('[data-valmsg-for="' + field + '"]');
+
+                // mark the input invalid
+                input.addClass('is-invalid');
+                // show the first message
+                span.text(messages[0]);
+            });
+        }
     });
+
 </script>

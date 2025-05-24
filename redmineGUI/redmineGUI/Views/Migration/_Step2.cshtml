@@ -11,6 +11,7 @@
             <div class="d-flex flex-column flex-md-row gap-4 py-5 align-items-center justify-content-center">
                 <div id="importProjectContainer" class="list-group list-group-checkable d-grid gap-2 border-0"></div>
             </div>
+            <div class="pager"></div>
         </div>
          <div class="flex-fill mb-4 pt-5 bg-body-tertiary rounded-3">
             <h2 class="text-center mb-2">Export server</h2>
@@ -23,36 +24,29 @@
         <button type="submit" class="btn btn-block w-50 btn-primary">Next step</button>
     </div>
 </form>
-
+<script src="~/js/pager.js"></script>
 <script>
-    let offset = 0;
-    let limit = 50;
+    function loadProjects(page = 1) {
+        const offset = (page - 1) * pager.limit;
+        $.getJSON(`/migration/GetProjects?offset=${offset}&limit=${pager.limit}`)
+            .done(function(data) {
+                pager.setTotalCount(data.totalCount);
+                const container = $('#importProjectContainer').empty();
+                data.projects.forEach(p => container.append(addProject(p)));
 
-   function loadProjects() {
-        $.ajax({
-            url: `/migration/GetProjects?offset=${offset}&limit=${limit}`,
-            method: 'GET',
-            success: function(data) {
-                const projectsList = $('#importProjectContainer');
-                data.forEach(project => {
-                    projectsList.append(addProject(project));
-                });
-
-                offset += limit;
-                limit += 50;
-            },
-            error: function(err) {
-                console.error('Error fetching projects:', err);
-            }
-        });
+                pager.renderPager();
+            })
+            .fail(err => console.error('Error loading projects', err));
     }
 
     function addProject(project, type = 'export') {
         const isDisabled = type === 'import' ? 'disabled' : '';
+        const isExported = $('#exportProjectContainer').find(`[data-project-id='${project.id}']`).length > 0 ? 'checked' : '';
+        
         return `
         <div data-project-id='${project.id}' data-project-description='${project.description}'
             data-project-name='${project.name}'>
-            <input class="list-group-item-check pe-none" type="checkbox" name="${type}Projects" id="project${project.id}${type}" value="${project.id}" ${isDisabled}>
+            <input class="list-group-item-check pe-none" type="checkbox" name="${type}Projects" id="project${project.id}${type}" value="${project.id}" ${isExported} ${isDisabled}>
             <label class="list-group-item rounded-3 py-3" for="project${project.id}${type}">
                 ${project.name}
                 <span class="d-block small opacity-50">${project.description}</span>
@@ -62,11 +56,8 @@
     }
 
     $(document).ready(function() {
+        pager.init(loadProjects);
         loadProjects();
-
-        $('#load-more').click(function() {
-            loadProjects();
-        });
 
         const exportProjectContainer = $('#exportProjectContainer');
         $(document).on('change', 'input[name="exportProjects"]', function() {

@@ -35,7 +35,8 @@
                 url: `/Migration/GetUserConflict`,
                 method: 'GET',
                 success: function (data) {
-                    data.exportServerUsers.forEach(user => {
+                    console.log(data);
+                    data.exportServerUsers.users.forEach(user => {
                         userOptions += `<option value="${user.id}">${user.mail} - ${user.firstname} ${user.lastname}</option>`;
                     });
 

@@ -63,23 +63,35 @@ public class MigrationController : Controller
     [HttpPost]
     public async Task<IActionResult> SaveApiKey([FromBody] ApiKeyModel model)
     {
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState
+                .Where(kvp => kvp.Value.Errors.Any())
+                .ToDictionary(
+                    kvp => kvp.Key.Split('.').Last(),
+                    kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                );
+
+            return BadRequest(new { success = false, errors });
+        }
+
         _apiKeyModel = model;
 
         var exportServer = new RedmineServerModel
         {
-            ApiKey = _apiKeyModel.apiKeyExport,
-            BaseUrl = _apiKeyModel.baseUrlExport,
+            ApiKey = _apiKeyModel.ApiKeyExport,
+            BaseUrl = _apiKeyModel.BaseUrlExport,
         };
 
         var importServer = new RedmineServerModel
         {
-            ApiKey = _apiKeyModel.apiKeyImport,
-            BaseUrl = _apiKeyModel.baseUrlImport,
+            ApiKey = _apiKeyModel.ApiKeyImport,
+            BaseUrl = _apiKeyModel.BaseUrlImport,
         };
 
         _redmineApiController = new RedmineApiController(exportServer, importServer);
 
-        return Json(new { success = true, message = "API keys saved successfully.", apikeyModel= _apiKeyModel.apiKeyExport });
+        return Json(new { success = true, message = "API keys saved successfully.", apikeyModel= _apiKeyModel.ApiKeyExport });
     }
 
     [HttpPost]
@@ -156,8 +168,8 @@ public class MigrationController : Controller
     {
         using (HttpClient client = new HttpClient())
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, $"{_apiKeyModel.baseUrlExport}/issues.json");
-            request.Headers.Add("X-Redmine-API-Key", _apiKeyModel.apiKeyExport);
+            var request = new HttpRequestMessage(HttpMethod.Get, $"{_apiKeyModel.BaseUrlExport}/issues.json");
+            request.Headers.Add("X-Redmine-API-Key", _apiKeyModel.ApiKeyExport);
             var response = await client.SendAsync(request);
             
             if (response.IsSuccessStatusCode)
@@ -211,12 +223,10 @@ public class MigrationController : Controller
     {
         List<RedmineUser> conflictUser = new List<RedmineUser>();
         var exportServerUsers = await _redmineApiController.GetUsers(RedmineApiController.TYPE_EXPORT, -1);
+
         foreach (var userId in _redmineUsersId) {
             RedmineUser user = await _redmineApiController.GetUserById(RedmineApiController.TYPE_IMPORT, userId);
-            var userExist = exportServerUsers.FirstOrDefault(u => u.Mail == user.Mail);
-            if (userExist != null) {
-                conflictUser.Add(user);
-            }
+            conflictUser.Add(user);
         }
 
         return Ok(new { success = true, conflictUser = conflictUser, exportServerUsers = exportServerUsers });

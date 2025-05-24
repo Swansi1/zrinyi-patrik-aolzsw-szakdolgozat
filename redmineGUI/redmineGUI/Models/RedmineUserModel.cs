@@ -18,14 +18,20 @@ public class RedmineUser
     public string TwofaScheme { get; set; }
 }
 
-public class RedmineUsersResponse
+public class RedmineUserResponse
 {
     [JsonProperty("users")]
     public List<RedmineUser> Users { get; set; }
-}
-
-public class RedmineUserResponse
-{
+    
     [JsonProperty("User")]
     public RedmineUser User { get; set; }
+    
+    [JsonProperty("offset")]
+    public int Offset { get; set; }
+
+    [JsonProperty("limit")]
+    public int Limit { get; set; }
+
+    [JsonProperty("total_count")]
+    public int TotalCount { get; set; }
 }

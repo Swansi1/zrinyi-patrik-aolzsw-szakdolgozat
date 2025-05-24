@@ -1,9 +1,20 @@
 namespace redmineGUI.Models;
 
+using System.ComponentModel.DataAnnotations;
+
 public class ApiKeyModel
 {
-    public string apiKeyExport { get; set; }
-    public string baseUrlExport { get; set; }
-    public string apiKeyImport { get; set; }
-    public string baseUrlImport { get; set; }
+    [Required(ErrorMessage = "Export API Key is required")]
+    public string ApiKeyExport { get; set; }
+
+    [Required(ErrorMessage = "Export Base URL is required")]
+    [Url(ErrorMessage = "Must be a valid URL")]
+    public string BaseUrlExport { get; set; }
+
+    [Required(ErrorMessage = "Import API Key is required")]
+    public string ApiKeyImport { get; set; }
+
+    [Required(ErrorMessage = "Import Base URL is required")]
+    [Url(ErrorMessage = "Must be a valid URL")]
+    public string BaseUrlImport { get; set; }
 }

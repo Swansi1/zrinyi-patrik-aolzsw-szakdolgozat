@@ -21,25 +21,24 @@ namespace redmineGUI.Controllers
             _importServer = importServer;
         }
 
-        public async Task<List<RedmineUser>> GetUsers(int type, int offset = 0, int limit = 50)
+        public async Task<RedmineUserResponse> GetUsers(int type, int offset = 0, int limit = 50)
         {
-            var server = this.GetServerType(type);
+            var server = GetServerType(type);
             string urlParams = GetUrlParamsLimit(offset, limit);
 
-            using (HttpClient client = new HttpClient())
+            using (var client = new HttpClient())
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, $"{server.BaseUrl}/users.json{urlParams}");
-                request.Headers.Add("X-Redmine-API-Key", server.ApiKey);
-                var response = await client.SendAsync(request);
+                var req = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"{server.BaseUrl}/users.json{urlParams}"
+                );
+                req.Headers.Add("X-Redmine-API-Key", server.ApiKey);
 
-                if (response.IsSuccessStatusCode)
-                {
-                    string responseData = await response.Content.ReadAsStringAsync();
-                    var usersResponse = JsonConvert.DeserializeObject<RedmineUsersResponse>(responseData);
-                    return usersResponse.Users;
-                }
+                var resp = await client.SendAsync(req);
+                resp.EnsureSuccessStatusCode();
 
-                return new List<RedmineUser>();
+                var json = await resp.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<RedmineUserResponse>(json);
             }
         }
 
@@ -64,24 +63,24 @@ namespace redmineGUI.Controllers
             }
         }
 
-        public async Task<List<RedmineProject>> GetProjects(int type, int offset = 0, int limit = 50)
+        public async Task<RedmineProjectsResponse> GetProjects(int type, int offset = 0, int limit = 50)
         {
-            var server = this.GetServerType(type);
+            var server = GetServerType(type);
             string urlParams = GetUrlParamsLimit(offset, limit);
 
-            using (HttpClient client = new HttpClient())
+            using (var client = new HttpClient())
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, $"{server.BaseUrl}/projects.json{urlParams}");
-                request.Headers.Add("X-Redmine-API-Key", server.ApiKey);
-                var response = await client.SendAsync(request);
-                if (response.IsSuccessStatusCode)
-                {
-                    string responseData = await response.Content.ReadAsStringAsync();
-                    var projectsResponse = JsonConvert.DeserializeObject<RedmineProjectsResponse>(responseData);
-                    return projectsResponse.Projects;
-                }
+                var req = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"{server.BaseUrl}/projects.json{urlParams}"
+                );
+                req.Headers.Add("X-Redmine-API-Key", server.ApiKey);
 
-                return new List<RedmineProject>{};
+                var resp = await client.SendAsync(req);
+                resp.EnsureSuccessStatusCode();
+
+                var json = await resp.Content.ReadAsStringAsync();
+                return JsonConvert.DeserializeObject<RedmineProjectsResponse>(json);
             }
         }
 

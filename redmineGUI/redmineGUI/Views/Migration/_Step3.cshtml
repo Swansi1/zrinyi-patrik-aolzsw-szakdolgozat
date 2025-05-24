@@ -11,6 +11,7 @@
             <div class="d-flex flex-column flex-md-row gap-4 py-5 align-items-center justify-content-center">
                 <div id="importUsersContainer" class="list-group list-group-checkable d-grid gap-2 border-0"></div>
             </div>
+            <div class="pager"></div>
         </div>
          <div class="flex-fill mb-4 pt-5 bg-body-tertiary rounded-3">
             <h2 class="text-center mb-2">Export server</h2>
@@ -26,10 +27,12 @@
 <script>
     function addUsers(user, type = 'export') {
         const isDisabled = type === 'import' ? 'disabled' : '';
+        const isExported = $('#exportUsersContainer').find(`[data-user-id='${user.id}']`).length > 0 ? 'checked' : '';
+        
         return `
         <div data-user-id='${user.id}' data-user-firstname='${user.firstname}'
             data-user-lastname='${user.lastname}' data-user-admin='${user.admin}' data-user-mail='${user.mail}'>
-            <input class="list-group-item-check pe-none" type="checkbox" name="${type}Users" id="project${user.id}${type}" value="${user.id}" ${isDisabled}>
+            <input class="list-group-item-check pe-none" type="checkbox" name="${type}Users" id="project${user.id}${type}" value="${user.id}" ${isExported} ${isDisabled}>
             <label class="list-group-item rounded-3 py-3" for="project${user.id}${type}">
                 ${user.id} - ${user.firstname} ${user.lastname}
                 <span class="d-block small opacity-50">mail: ${user.mail} | IsAdmin: ${user.admin}</span>
@@ -39,29 +42,28 @@
     }
 
     $(document).ready(function() {
-        let offset = 0;
-        const limit = 50;
-
-        function loadUsers() {
+        function loadUsers(page = 1) {
+            const offset = (page - 1) * pager.limit;
             $.ajax({
-                url: `/Migration/GetUsers?offset=${offset}&limit=${limit}`,
+                url: `/Migration/GetUsers?offset=${offset}&limit=${pager.limit}`,
                 method: 'GET',
                 success: function(data) {
-                    if (Array.isArray(data)) {
-                        const userList = $('#importUsersContainer');
-                        data.forEach(user => {
-                            userList.append(addUsers(user));
-                        });
-                        offset += limit;
-                    } else {
-                        console.error('Unexpected data format:', data);
-                    }
+                    console.log(data)
+                    pager.setTotalCount(data.totalCount);
+                    const userList = $('#importUsersContainer').empty();
+                    data.users.forEach(user => {
+                        userList.append(addUsers(user));
+                    });
+
+                    pager.renderPager();
                 },
                 error: function(err) {
                     console.error('Error fetching users:', err);
                 }
             });
         }
+        
+        pager.init(loadUsers);
         loadUsers();
 
         const exportUserContainer = $('#exportUsersContainer');
