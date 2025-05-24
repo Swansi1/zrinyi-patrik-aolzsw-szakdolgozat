@@ -4,11 +4,37 @@ The Redmine Migration Tool is a powerful tool designed to facilitate the migrati
 
 ## Table of Contents
 
-- [Installation](#installation)
+- [Build docker file](#redmineGUI)
+- [Installation - test redmine](#installation)
 - [Usage](#usage)
 - [Screenshots](#Screenshots)
 
-## Installation
+# redmineGUI – Docker Build & Run Guide
+
+This guide explains how to build and run the **redmineGUI** project using Docker.
+
+## 📦 Prerequisites
+
+- [Docker](https://www.docker.com/products/docker-desktop/) installed
+- (Optional) [Docker Compose](https://docs.docker.com/compose/) if using `docker-compose.yml`
+
+---
+
+## 🔨 Build the Docker Image
+
+Open a terminal in the project directory where the `Dockerfile` is located and run:
+
+```bash
+docker build -t redminegui .
+```
+
+Run it:
+```bash
+docker run -d -p 8080:8080 --name redminegui-container redminegui
+```
+
+
+## Installation (test redmine)
 To run the project using Docker Compose, follow these steps:
 
 1. Clone the repository.
